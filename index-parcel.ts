@@ -119,4 +119,80 @@ document.querySelectorAll('#parallel_revision_btn')[0].addEventListener('click',
 
 document.querySelectorAll('#sequential_revision_btn')[0].addEventListener('click', (evt) => {
     score_streams_sequential.subscribe();
-})
+});
+
+
+// =============== subjects, hot & colds observables and multicasting tests
+
+
+// ====== multicast observable via subject
+
+let int = rxjs.interval(1000).pipe(operators.take(4));
+
+let subject = new rxjs.Subject();
+// let subject = new rxjs.BehaviorSubject(null); //We can also multicast using behaviorSubject or other specialized subject type
+// let subject = new rxjs.ReplaySubject(2); //We can also multicast using behaviorSubject or other specialized subject type
+// let subject = new rxjs.AsyncSubject(); //We can also multicast using behaviorSubject or other specialized subject type
+
+subject.subscribe((val) => console.log('hola de observer 1', val));
+
+setTimeout(() => {
+    subject.subscribe((val) => console.log('hola de observer 2', val));
+}, 2100);
+
+int.subscribe(subject)
+
+// ====== multicast observable using multicast operator
+
+let source2 = rxjs.interval(1000).pipe(operators.take(4));
+let subject2 = new rxjs.Subject();
+
+let multicasted = source2.pipe(operators.multicast(subject2));
+
+// These are, under the hood, subject2.subscribe({...})
+multicasted.subscribe((val) => console.log('Hi from multicasted obs 1', val);
+
+setTimeout(() => {
+    multicasted.subscribe((val) => console.log('Hi from multicasted obs 2', val));
+}, 2100);
+
+// This is, under the hood, source2.subscribe(subject2). Connect means "subscribing the source observable with the subject as observer"
+// connect returns a subscription
+multicasted.connect();
+
+
+// ======= multicast observable using multicast operator + refCount
+
+let source3 = rxjs.interval(3000);
+let subject3 = new rxjs.Subject();
+
+let refCounted = source3.pipe(operators.multicast(subject3), operators.refCount());
+
+let subscription1, subscription2;
+ 
+// This calls `connect()`, because
+// it is the first subscriber to `refCounted`
+console.log('observerA subscribed');
+subscription1 = refCounted.subscribe({
+  next: (v) => console.log(`observerA: ${v}`)
+});
+ 
+setTimeout(() => {
+  console.log('observerB subscribed');
+  subscription2 = refCounted.subscribe({
+    next: (v) => console.log(`observerB: ${v}`)
+  });
+}, 600);
+ 
+setTimeout(() => {
+  console.log('observerA unsubscribed');
+  subscription1.unsubscribe();
+}, 1200);
+ 
+// This is when the shared Observable execution will stop, because
+// `refCounted` would have no more subscribers after this
+setTimeout(() => {
+  console.log('observerB unsubscribed');
+  subscription2.unsubscribe();
+}, 2000);
+
