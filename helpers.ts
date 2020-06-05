@@ -14,6 +14,7 @@ function instrument<T>(source: Observable<T>) {
 function observer<T>(name: string) {
   return {
     next: (value: T) => console.log(`observer ${name}: ${value}`),
+    error: (error: any) => console.log(`observer ${name} error: ${error}`),
     complete: () => console.log(`observer ${name}: complete`)
   };
 }
